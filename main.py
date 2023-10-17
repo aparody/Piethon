@@ -1,7 +1,9 @@
+import random
 import pygame
 import sys
 import speech_recognition as sr
 import threading
+from enum import Enum
 
 pygame.init()
 
@@ -9,14 +11,24 @@ recognizer = sr.Recognizer()
 black = (0, 0, 0)
 white = (255, 255, 255)
 green = (0, 255, 0)
+red = (255, 0, 0)
 screen_width = 400
 screen_height = 400
+scene_index = 0     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
 
-#Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
-scene_index = 0
+CHANGE_UP = pygame.USEREVENT + 1
+CHANGE_RIGHT = pygame.USEREVENT + 2
+CHANGE_DOWN = pygame.USEREVENT + 3
+CHANGE_LEFT = pygame.USEREVENT + 4
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Snake Game")
+
+class Direction(Enum):
+    UP = 1
+    RIGHT = 2
+    DOWN = 3
+    LEFT = 4
 
 def voice_recognition():
     global scene_index
@@ -42,14 +54,18 @@ def voice_recognition():
                 #Play screen commands
                 if scene_index == 1:
                     if "up" in command:
+                        pygame.event.post(pygame.event.Event(CHANGE_UP))
                         pass
                     elif "down" in command:
+                        pygame.event.post(pygame.event.Event(CHANGE_DOWN))
                         pass
                     elif "left" in command:
+                        pygame.event.post(pygame.event.Event(CHANGE_LEFT))
                         pass
                     elif "right" in command:
+                        pygame.event.post(pygame.event.Event(CHANGE_RIGHT))
                         pass
-                    #Used for testing purposes
+                    #'Next' command is used for testing the end screen quickly
                     elif "next" in command:
                         scene_index = 2
                     else:
@@ -83,10 +99,6 @@ def start_screen():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            # if event.type == pygame.KEYDOWN:
-            #     if event.key == pygame.K_SPACE:
-            #         scene_index = 1
-            #         return
 
         screen.fill(white)
         titleFont = pygame.font.Font(None, 72)
@@ -110,15 +122,117 @@ def start_screen():
         pygame.display.update()
 
 def play_screen():
-    #Nothing is implemented here yet, just needed something for testing
+    global scene_index
+    
+    def move_snake():
+        
+        prevVal = snake[0][:]
+        for x in range(1,len(snake)):
+            temp = snake[x][:]
+            snake[x] = prevVal
+            prevVal = temp
+        
+        if currentDirection == Direction.RIGHT:
+            snake[0][0] += 10
+        elif currentDirection == Direction.DOWN:
+            snake[0][1] += 10
+        elif currentDirection == Direction.LEFT:
+            snake[0][0] -= 10
+        elif currentDirection == Direction.UP:
+            snake[0][1] -= 10
+    
+    def generate_pie():
+        pie = [random.randrange(1, screen_width), random.randrange(20, screen_height)]
+        while pie in snake:
+            pie = [random.randrange(1, screen_width), random.randrange(20, screen_height)]
+        pie = [pie[0] // 10 * 10, pie[1] // 10 * 10]
+        return pie
+
+    def add_tail():
+        # should eventually account for if adding to tail would cause to cross border
+        currentEnd = snake[-1]
+        if currentDirection == Direction.RIGHT:
+            snake.append([currentEnd[0] - 10, currentEnd[1]])
+        elif currentDirection == Direction.DOWN:
+            snake.append([currentEnd[0], currentEnd[1] - 10])
+        elif currentDirection == Direction.LEFT:
+            snake.append([currentEnd[0] + 10, currentEnd[1]])
+        elif currentDirection == Direction.UP:
+            snake.append([currentEnd[0], currentEnd[1] + 10])
+
+
+    # color will eventually be changeable
+    color = green
+    score = 0
+    currentDirection = Direction.RIGHT
+    snake = [
+        [screen_width // 2, screen_height // 2],
+        [screen_width // 2 - 10, screen_height // 2],
+        [screen_width // 2 - 20, screen_height // 2]
+    ]
+    clock = pygame.time.Clock()
+    # pie = generate_pie()
+    pie = [screen_width // 2 + 40, screen_height // 2]
+
     while scene_index == 1:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-
+            if event.type == CHANGE_UP:
+                if currentDirection != Direction.DOWN:
+                    currentDirection = Direction.UP
+            if event.type == CHANGE_DOWN:
+                if currentDirection != Direction.UP:
+                    currentDirection = Direction.DOWN
+            if event.type == CHANGE_RIGHT:
+                if currentDirection != Direction.LEFT:
+                    currentDirection = Direction.RIGHT
+            if event.type == CHANGE_LEFT:
+                if currentDirection != Direction.RIGHT:
+                    currentDirection = Direction.LEFT
+        
         screen.fill(black)
+
+        for coord in snake:
+            pygame.draw.rect(screen, color, pygame.Rect(coord[0], coord[1], 10, 10))
+        
+        pygame.draw.rect(screen, red, pygame.Rect(pie[0], pie[1], 10, 10))
+        
+        move_snake()
+
+        if snake[0][0] < 0 or snake[0][0] > screen_width or snake[0][1] < 0 or snake[0][1] > screen_height:
+            # snake reached wall, end game
+            print('game ended')
+            scene_index = 2
+        elif snake[0][0] in snake[1:]:
+            # snake hit itself, end game
+            print('game ended')
+            scene_index = 2
+        if snake[0] == pie:
+            # snake has eaten pie
+            score += 1
+            add_tail()
+            pie = generate_pie()
+        
+        scoreFont = pygame.font.Font(None, 30)
+        scoreText = scoreFont.render("Score: " + str(score), True, white)
+        scoreRect = scoreText.get_rect()
+        scoreRect.center = (screen_width // 2, 10)
+
+        commandFont = pygame.font.Font(None, 30)
+        commandText = commandFont.render(currentDirection.name, True, white)
+        commandRect = commandText.get_rect()
+        commandRect.topleft = (0, 0)
+
+        pygame.draw.rect(screen, red, (0, 20, screen_width, screen_height - 20), 1)
+        
+        clock.tick(1)
+
+        screen.blit(scoreText, scoreRect)
+        screen.blit(commandText, commandRect)
         pygame.display.update()
+
 
 def end_screen():
     while scene_index == 2:
