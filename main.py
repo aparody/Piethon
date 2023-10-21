@@ -1,8 +1,10 @@
 import random
+import random
 import pygame
 import sys
 import speech_recognition as sr
 import threading
+from enum import Enum
 from enum import Enum
 
 pygame.init()
@@ -12,9 +14,15 @@ black = (0, 0, 0)
 white = (255, 255, 255)
 green = (0, 255, 0)
 red = (255, 0, 0)
+red = (255, 0, 0)
 screen_width = 400
 screen_height = 400
-game_running = False
+scene_index = 0     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
+
+CHANGE_UP = pygame.USEREVENT + 1
+CHANGE_RIGHT = pygame.USEREVENT + 2
+CHANGE_DOWN = pygame.USEREVENT + 3
+CHANGE_LEFT = pygame.USEREVENT + 4
 
 CHANGE_UP = pygame.USEREVENT + 1
 CHANGE_RIGHT = pygame.USEREVENT + 2
@@ -31,7 +39,7 @@ class Direction(Enum):
     LEFT = 4
 
 def voice_recognition():
-    global game_running
+    global scene_index
 
     while True:
         with sr.Microphone() as source:
@@ -42,32 +50,49 @@ def voice_recognition():
                 command = recognizer.recognize_google(audio).lower()
                 print("You said:", command)
 
-                if game_running:
-                    # Process the command and control the Snake
+                 #Start screen commands
+                if scene_index == 0:
+                    if "start" in command:
+                        scene_index = 1
+                    elif "instructions" in command:
+                        scene_index = 3
+                    else:
+                        print("Unrecognized command") 
+                
+                #Play screen commands
+                if scene_index == 1:
                     if "up" in command:
-                        # Move the Snake up
                         pygame.event.post(pygame.event.Event(CHANGE_UP))
                         pass
                     elif "down" in command:
-                        # Move the Snake down
                         pygame.event.post(pygame.event.Event(CHANGE_DOWN))
                         pass
                     elif "left" in command:
-                        # Move the Snake left
                         pygame.event.post(pygame.event.Event(CHANGE_LEFT))
                         pass
                     elif "right" in command:
-                        # Move the Snake right
                         pygame.event.post(pygame.event.Event(CHANGE_RIGHT))
                         pass
+                    #'Next' command is used for testing the end screen quickly
+                    elif "next" in command:
+                        scene_index = 2
                     else:
                         print("Unrecognized command")
-                else:
-                    if "start" in command:
-                        game_running = True
-                    else:
-                        print("Unrecognized command") 
+                
+                #End screen commands
+                if scene_index == 2:
+                    if "retry" in command:
+                        scene_index = 1
+                    elif "exit" in command:
+                        pygame.quit()
 
+                #Instruction commands
+                if scene_index == 3:
+                    if "continue" in command:
+                        scene_index = 0
+                    else:
+                        print("Unrecognized command")
+                
             except sr.UnknownValueError:
                 print("Could not understand audio")
             except sr.RequestError as e:
@@ -75,35 +100,38 @@ def voice_recognition():
 
 
 def start_screen():
-    global game_running
+    global scene_index
     
-    while not game_running:
+    while scene_index == 0:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    game_running = True
-                    return
 
         screen.fill(white)
         titleFont = pygame.font.Font(None, 72)
-        titleText = titleFont.render("Snake Game", True, black)
+        titleText = titleFont.render("Piethon", True, black)
         titleRect = titleText.get_rect()
         titleRect.center = (screen_width // 2, screen_height // 2)
 
         instructionFont = pygame.font.Font(None, 36)
-        instructionText = instructionFont.render("Say 'start' to play", True, black)
-        instructionRect = instructionText.get_rect()
-        instructionRect.center = (screen_width // 2, screen_height // 2 + 50)
+        instructionText1 = instructionFont.render("Say 'start' to play", True, black)
+        instructionText2 = instructionFont.render("Say 'instructions' for instructions", True, black)
+
+        instructionRect1 = instructionText1.get_rect()
+        instructionRect2 = instructionText2.get_rect()
+
+        instructionRect1.center = (screen_width // 2, screen_height // 2 + 50)
+        instructionRect2.center = (screen_width // 2, screen_height // 2 + 90)
 
         screen.blit(titleText, titleRect)
-        screen.blit(instructionText, instructionRect)
+        screen.blit(instructionText1, instructionRect1)
+        screen.blit(instructionText2, instructionRect2)
         pygame.display.update()
 
 def play_screen():
-
+    global scene_index
+    
     def move_snake():
         
         prevVal = snake[0][:]
@@ -154,7 +182,7 @@ def play_screen():
     # pie = generate_pie()
     pie = [screen_width // 2 + 40, screen_height // 2]
 
-    while game_running:
+    while scene_index == 1:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -175,7 +203,7 @@ def play_screen():
         screen.fill(black)
 
         for coord in snake:
-            pygame.draw.rect(screen, color, pygame.Rect(coord[0], coord[1], 10, 10))
+            pygame.draw.circle(screen, color, (coord[0], coord[1]), 10)
         
         pygame.draw.rect(screen, red, pygame.Rect(pie[0], pie[1], 10, 10))
         
@@ -184,10 +212,11 @@ def play_screen():
         if snake[0][0] < 0 or snake[0][0] > screen_width or snake[0][1] < 0 or snake[0][1] > screen_height:
             # snake reached wall, end game
             print('game ended')
+            scene_index = 2
         elif snake[0][0] in snake[1:]:
             # snake hit itself, end game
             print('game ended')
-        
+            scene_index = 2
         if snake[0] == pie:
             # snake has eaten pie
             score += 1
@@ -213,6 +242,122 @@ def play_screen():
         pygame.display.update()
 
 
+def end_screen():
+    while scene_index == 2:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(green)
+        titleFont = pygame.font.Font(None, 72)
+        titleText = titleFont.render("Game over", True, black)
+        titleRect = titleText.get_rect()
+        titleRect.center = (screen_width // 2, screen_height // 2)
+
+        instructionFont = pygame.font.Font(None, 36)
+        instructionText1 = instructionFont.render("Say 'retry' to try again", True, black)
+        instructionText2 = instructionFont.render("Say 'exit' to quit", True, black)
+
+        instructionRect1 = instructionText1.get_rect()
+        instructionRect2 = instructionText2.get_rect()
+
+        instructionRect1.center = (screen_width // 2, screen_height // 2 + 50)
+        instructionRect2.center = (screen_width // 2, screen_height // 2 + 90)
+
+        screen.blit(titleText, titleRect)
+        screen.blit(instructionText1, instructionRect1)
+        screen.blit(instructionText2, instructionRect2)
+        pygame.display.update()
+
+def instruction_screen():
+    instructions = [
+        "'Up' 'Left' 'Right' 'Down'",
+        "Speak the commands to move",
+        "Say 'continue' to return",
+    ]
+    while scene_index == 3:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(white)
+        titleFont = pygame.font.Font(None, 56)
+        titleText = titleFont.render("Instructions", True, black)
+        titleRect = titleText.get_rect()
+        titleRect.center = (screen_width // 2, 50)
+
+        instructionFont = pygame.font.Font(None, 36)
+
+        for i, text in enumerate(instructions):
+            instructionText = instructionFont.render(text, True, black)
+            instructionRect = instructionText.get_rect()
+            instructionRect.center = (screen_width // 2, screen_height // 2 + 50 + i * 40)
+            screen.blit(instructionText, instructionRect)
+
+        screen.blit(titleText, titleRect)
+
+        pygame.display.update()
+
+
+def end_screen():
+    while scene_index == 2:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(green)
+        titleFont = pygame.font.Font(None, 72)
+        titleText = titleFont.render("Game over", True, black)
+        titleRect = titleText.get_rect()
+        titleRect.center = (screen_width // 2, screen_height // 2)
+
+        instructionFont = pygame.font.Font(None, 36)
+        instructionText1 = instructionFont.render("Say 'retry' to try again", True, black)
+        instructionText2 = instructionFont.render("Say 'exit' to quit", True, black)
+
+        instructionRect1 = instructionText1.get_rect()
+        instructionRect2 = instructionText2.get_rect()
+
+        instructionRect1.center = (screen_width // 2, screen_height // 2 + 50)
+        instructionRect2.center = (screen_width // 2, screen_height // 2 + 90)
+
+        screen.blit(titleText, titleRect)
+        screen.blit(instructionText1, instructionRect1)
+        screen.blit(instructionText2, instructionRect2)
+        pygame.display.update()
+
+def instruction_screen():
+    instructions = [
+        "'Up' 'Left' 'Right' 'Down'",
+        "Speak the commands to move",
+        "Say 'continue' to return",
+    ]
+    while scene_index == 3:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        screen.fill(white)
+        titleFont = pygame.font.Font(None, 56)
+        titleText = titleFont.render("Instructions", True, black)
+        titleRect = titleText.get_rect()
+        titleRect.center = (screen_width // 2, 50)
+
+        instructionFont = pygame.font.Font(None, 36)
+
+        for i, text in enumerate(instructions):
+            instructionText = instructionFont.render(text, True, black)
+            instructionRect = instructionText.get_rect()
+            instructionRect.center = (screen_width // 2, screen_height // 2 + 50 + i * 40)
+            screen.blit(instructionText, instructionRect)
+
+        screen.blit(titleText, titleRect)
+
+        pygame.display.update()
 
 voice_thread = threading.Thread(target=voice_recognition)
 voice_thread.start()
@@ -223,11 +368,15 @@ while True:
             pygame.quit()
             sys.exit()
 
-    if game_running:
-        play_screen()
-    else:
+    if scene_index == 0:
         start_screen()
-
+    elif scene_index == 1:
+        play_screen()
+    elif scene_index == 2:
+        end_screen()
+    elif scene_index == 3:
+        instruction_screen()
+    
     pygame.display.update()
 
 
