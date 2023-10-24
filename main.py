@@ -14,20 +14,23 @@ black = (0, 0, 0)
 white = (255, 255, 255)
 green = (0, 255, 0)
 red = (255, 0, 0)
-red = (255, 0, 0)
+blueberry = (42, 65, 111)
+cherry = (204, 0, 0)
+apple = (141, 182, 0)
+pumpkin = (255, 117, 24)
+pecan = (193, 176, 148)
+lemon = (255, 243, 79)
+blackberry = (77, 1, 52)
 screen_width = 400
 screen_height = 400
-scene_index = 0     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
+scene_index = 1     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
 
 CHANGE_UP = pygame.USEREVENT + 1
 CHANGE_RIGHT = pygame.USEREVENT + 2
 CHANGE_DOWN = pygame.USEREVENT + 3
 CHANGE_LEFT = pygame.USEREVENT + 4
-
-CHANGE_UP = pygame.USEREVENT + 1
-CHANGE_RIGHT = pygame.USEREVENT + 2
-CHANGE_DOWN = pygame.USEREVENT + 3
-CHANGE_LEFT = pygame.USEREVENT + 4
+PAUSE_GAME = pygame.USEREVENT + 5
+RESUME_GAME = pygame.USEREVENT + 6
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Snake Game")
@@ -73,6 +76,10 @@ def voice_recognition():
                     elif "right" in command:
                         pygame.event.post(pygame.event.Event(CHANGE_RIGHT))
                         pass
+                    elif "pause" in command:
+                        pygame.event.post(pygame.event.Event(PAUSE_GAME))
+                    elif "resume" in command:
+                        pygame.event.post(pygame.event.Event(RESUME_GAME))
                     #'Next' command is used for testing the end screen quickly
                     elif "next" in command:
                         scene_index = 2
@@ -150,9 +157,9 @@ def play_screen():
             snake[0][1] -= 10
     
     def generate_pie():
-        pie = [random.randrange(1, screen_width), random.randrange(20, screen_height)]
+        pie = [random.randrange(20, screen_width - 20), random.randrange(40, screen_height - 20)]
         while pie in snake:
-            pie = [random.randrange(1, screen_width), random.randrange(20, screen_height)]
+            pie = [random.randrange(20, screen_width - 20), random.randrange(40, screen_height - 20)]
         pie = [pie[0] // 10 * 10, pie[1] // 10 * 10]
         return pie
 
@@ -170,7 +177,7 @@ def play_screen():
 
 
     # color will eventually be changeable
-    color = green
+    color = blueberry
     score = 0
     currentDirection = Direction.RIGHT
     snake = [
@@ -179,8 +186,10 @@ def play_screen():
         [screen_width // 2 - 20, screen_height // 2]
     ]
     clock = pygame.time.Clock()
+    # NOTE: The below is temporary because otherwise it is impossible to get the pie :(
     # pie = generate_pie()
     pie = [screen_width // 2 + 40, screen_height // 2]
+    isPaused = False
 
     while scene_index == 1:
         for event in pygame.event.get():
@@ -199,17 +208,26 @@ def play_screen():
             if event.type == CHANGE_LEFT:
                 if currentDirection != Direction.RIGHT:
                     currentDirection = Direction.LEFT
+            if event.type == PAUSE_GAME:
+                isPaused = True
+            if event.type == RESUME_GAME:
+                isPaused = False
         
-        screen.fill(black)
+        screen.fill(white)
+        for x in range(20,screen_width - 20,10):
+            for y in range(40,screen_height - 20,10):
+                checkColor = red if (x / 10) % 2 != (y / 10) % 2 else white
+                pygame.draw.rect(screen, checkColor, pygame.Rect(x, y, 10, 10))
 
         for coord in snake:
-            pygame.draw.circle(screen, color, (coord[0], coord[1]), 10)
+            pygame.draw.circle(screen, color, (coord[0], coord[1]), 5)
         
-        pygame.draw.rect(screen, red, pygame.Rect(pie[0], pie[1], 10, 10))
+        pygame.draw.circle(screen, black, (pie[0], pie[1]), 5)
         
-        move_snake()
+        if not isPaused:
+            move_snake()
 
-        if snake[0][0] < 0 or snake[0][0] > screen_width or snake[0][1] < 0 or snake[0][1] > screen_height:
+        if snake[0][0] < 20 or snake[0][0] > screen_width - 20 or snake[0][1] < 40 or snake[0][1] > screen_height - 20:
             # snake reached wall, end game
             print('game ended')
             scene_index = 2
@@ -224,16 +242,16 @@ def play_screen():
             pie = generate_pie()
         
         scoreFont = pygame.font.Font(None, 30)
-        scoreText = scoreFont.render("Score: " + str(score), True, white)
+        scoreText = scoreFont.render("Score: " + str(score), True, black)
         scoreRect = scoreText.get_rect()
-        scoreRect.center = (screen_width // 2, 10)
+        scoreRect.topright = (screen_width, 0)
 
         commandFont = pygame.font.Font(None, 30)
-        commandText = commandFont.render(currentDirection.name, True, white)
+        commandText = commandFont.render(currentDirection.name, True, black)
         commandRect = commandText.get_rect()
         commandRect.topleft = (0, 0)
 
-        pygame.draw.rect(screen, red, (0, 20, screen_width, screen_height - 20), 1)
+        pygame.draw.rect(screen, black, (20, 40, screen_width - 40, screen_height - 60), 1)
         
         clock.tick(1)
 
