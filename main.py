@@ -15,6 +15,8 @@ red = (255, 0, 0)
 screen_width = 400
 screen_height = 400
 scene_index = 0     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
+end_bg = pygame.image.load("images\endscreen.jpg")
+end_bg = pygame.transform.scale(end_bg, (screen_width, screen_height))
 
 CHANGE_UP = pygame.USEREVENT + 1
 CHANGE_RIGHT = pygame.USEREVENT + 2
@@ -52,7 +54,7 @@ def voice_recognition():
                         print("Unrecognized command") 
                 
                 #Play screen commands
-                if scene_index == 1:
+                elif scene_index == 1:
                     if "up" in command:
                         pygame.event.post(pygame.event.Event(CHANGE_UP))
                         pass
@@ -72,18 +74,25 @@ def voice_recognition():
                         print("Unrecognized command")
                 
                 #End screen commands
-                if scene_index == 2:
+                elif scene_index == 2:
                     if "retry" in command:
                         scene_index = 1
+                    elif "menu" in command:
+                        scene_index = 0
                     elif "exit" in command:
+                        pygame.display.quit()
                         pygame.quit()
+                        sys.exit()
+                    else:
+                        print("Unrecognized command")
 
                 #Instruction commands
-                if scene_index == 3:
+                elif scene_index == 3:
                     if "continue" in command:
                         scene_index = 0
                     else:
                         print("Unrecognized command")
+                
                 
             except sr.UnknownValueError:
                 print("Could not understand audio")
@@ -91,7 +100,7 @@ def voice_recognition():
                 print("Could not request results; {0}".format(e))
 
 
-def start_screen():
+def start_screen(high_score):
     global scene_index
     
     while scene_index == 0:
@@ -104,9 +113,9 @@ def start_screen():
         titleFont = pygame.font.Font(None, 72)
         titleText = titleFont.render("Piethon", True, black)
         titleRect = titleText.get_rect()
-        titleRect.center = (screen_width // 2, screen_height // 2)
+        titleRect.center = (screen_width // 2, screen_height // 4)
 
-        instructionFont = pygame.font.Font(None, 36)
+        instructionFont = pygame.font.Font(None, 30)
         instructionText1 = instructionFont.render("Say 'start' to play", True, black)
         instructionText2 = instructionFont.render("Say 'instructions' for instructions", True, black)
 
@@ -205,10 +214,12 @@ def play_screen():
             # snake reached wall, end game
             print('game ended')
             scene_index = 2
+            return score
         elif snake[0][0] in snake[1:]:
             # snake hit itself, end game
             print('game ended')
             scene_index = 2
+            return score
         if snake[0] == pie:
             # snake has eaten pie
             score += 1
@@ -232,34 +243,39 @@ def play_screen():
         screen.blit(scoreText, scoreRect)
         screen.blit(commandText, commandRect)
         pygame.display.update()
+        
+    return score
 
 
-def end_screen():
+def end_screen(score):
     while scene_index == 2:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-        screen.fill(green)
-        titleFont = pygame.font.Font(None, 72)
-        titleText = titleFont.render("Game over", True, black)
-        titleRect = titleText.get_rect()
-        titleRect.center = (screen_width // 2, screen_height // 2)
+        screen.blit(end_bg, (0, 0))
 
-        instructionFont = pygame.font.Font(None, 36)
-        instructionText1 = instructionFont.render("Say 'retry' to try again", True, black)
-        instructionText2 = instructionFont.render("Say 'exit' to quit", True, black)
+        instructionFont = pygame.font.Font(None, 20)
+        instructionText1 = instructionFont.render("Please say 'retry' to try again", True, white)
+        instructionText2 = instructionFont.render("say 'menu' to return to the start", True, white)
+        instructionText3 = instructionFont.render("or say 'exit' to quit", True, white)
+        scoreText = instructionFont.render("Score: " + str(score), True, white)
 
         instructionRect1 = instructionText1.get_rect()
         instructionRect2 = instructionText2.get_rect()
+        instructionRect3 = instructionText3.get_rect()
+        scoreRect = scoreText.get_rect()
 
-        instructionRect1.center = (screen_width // 2, screen_height // 2 + 50)
-        instructionRect2.center = (screen_width // 2, screen_height // 2 + 90)
+        instructionRect1.center = (105, 40)
+        instructionRect2.center = (110, 60)
+        instructionRect3.center = (70, 80)
+        scoreRect.center = (270, 100)
 
-        screen.blit(titleText, titleRect)
         screen.blit(instructionText1, instructionRect1)
         screen.blit(instructionText2, instructionRect2)
+        screen.blit(instructionText3, instructionRect3)
+        screen.blit(scoreText, scoreRect)
         pygame.display.update()
 
 def instruction_screen():
@@ -294,6 +310,7 @@ def instruction_screen():
 
 voice_thread = threading.Thread(target=voice_recognition)
 voice_thread.start()
+high_score = 0
 
 while True:
     for event in pygame.event.get():
@@ -302,11 +319,13 @@ while True:
             sys.exit()
 
     if scene_index == 0:
-        start_screen()
+        start_screen(high_score)
     elif scene_index == 1:
-        play_screen()
+        score = play_screen()
     elif scene_index == 2:
-        end_screen()
+        if score > high_score:
+            high_score = score
+        end_screen(score)
     elif scene_index == 3:
         instruction_screen()
     
