@@ -13,7 +13,7 @@ recognizer = sr.Recognizer()
 black = (0, 0, 0)
 white = (255, 255, 255)
 green = (0, 255, 0)
-red = (255, 0, 0)
+red = (249, 113, 110)
 blueberry = (42, 65, 111)
 cherry = (204, 0, 0)
 apple = (141, 182, 0)
@@ -21,11 +21,16 @@ pumpkin = (255, 117, 24)
 pecan = (193, 176, 148)
 lemon = (255, 243, 79)
 blackberry = (77, 1, 52)
-screen_width = 400
-screen_height = 400
-scene_index = 0     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
-end_bg = pygame.image.load("images\endscreen.jpg")
+screen_width = 600
+screen_height = 600
+scene_index = 1     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
+
+end_bg = pygame.image.load("images/endscreen.jpg")
 end_bg = pygame.transform.scale(end_bg, (screen_width, screen_height))
+play_bg = pygame.image.load("images/play-background.jpeg")
+play_bg = pygame.transform.scale(play_bg, (screen_width, screen_height))
+pie_img = pygame.image.load("images/pie.png")
+pie_img = pygame.transform.scale(pie_img, (40, 40))
 
 CHANGE_UP = pygame.USEREVENT + 1
 CHANGE_RIGHT = pygame.USEREVENT + 2
@@ -157,32 +162,32 @@ def play_screen():
             prevVal = temp
         
         if currentDirection == Direction.RIGHT:
-            snake[0][0] += 10
+            snake[0][0] += 30
         elif currentDirection == Direction.DOWN:
-            snake[0][1] += 10
+            snake[0][1] += 30
         elif currentDirection == Direction.LEFT:
-            snake[0][0] -= 10
+            snake[0][0] -= 30
         elif currentDirection == Direction.UP:
-            snake[0][1] -= 10
+            snake[0][1] -= 30
     
     def generate_pie():
-        pie = [random.randrange(20, screen_width - 20), random.randrange(40, screen_height - 20)]
+        pie = [random.randrange(30, screen_width - 30), random.randrange(60, screen_height - 30)]
         while pie in snake:
-            pie = [random.randrange(20, screen_width - 20), random.randrange(40, screen_height - 20)]
-        pie = [pie[0] // 10 * 10, pie[1] // 10 * 10]
+            pie = [random.randrange(30, screen_width - 30), random.randrange(60, screen_height - 30)]
+        pie = [pie[0] // 30 * 30, pie[1] // 30 * 30]
         return pie
 
     def add_tail():
         # should eventually account for if adding to tail would cause to cross border
         currentEnd = snake[-1]
         if currentDirection == Direction.RIGHT:
-            snake.append([currentEnd[0] - 10, currentEnd[1]])
+            snake.append([currentEnd[0] - 30, currentEnd[1]])
         elif currentDirection == Direction.DOWN:
-            snake.append([currentEnd[0], currentEnd[1] - 10])
+            snake.append([currentEnd[0], currentEnd[1] - 30])
         elif currentDirection == Direction.LEFT:
-            snake.append([currentEnd[0] + 10, currentEnd[1]])
+            snake.append([currentEnd[0] + 30, currentEnd[1]])
         elif currentDirection == Direction.UP:
-            snake.append([currentEnd[0], currentEnd[1] + 10])
+            snake.append([currentEnd[0], currentEnd[1] + 30])
 
 
     # color will eventually be changeable
@@ -191,13 +196,13 @@ def play_screen():
     currentDirection = Direction.RIGHT
     snake = [
         [screen_width // 2, screen_height // 2],
-        [screen_width // 2 - 10, screen_height // 2],
-        [screen_width // 2 - 20, screen_height // 2]
+        [screen_width // 2 - 30, screen_height // 2],
+        [screen_width // 2 - 60, screen_height // 2]
     ]
     clock = pygame.time.Clock()
     # NOTE: The below is temporary because otherwise it is impossible to get the pie :(
     # pie = generate_pie()
-    pie = [screen_width // 2 + 40, screen_height // 2]
+    pie = [screen_width // 2 + 60, screen_height // 2]
     isPaused = False
 
     while scene_index == 1:
@@ -222,21 +227,21 @@ def play_screen():
             if event.type == RESUME_GAME:
                 isPaused = False
         
-        screen.fill(white)
-        for x in range(20,screen_width - 20,10):
-            for y in range(40,screen_height - 20,10):
-                checkColor = red if (x / 10) % 2 != (y / 10) % 2 else white
-                pygame.draw.rect(screen, checkColor, pygame.Rect(x, y, 10, 10))
+        screen.blit(play_bg, (0, 0))
+        for x in range(30,screen_width - 30, 30):
+            for y in range(60,screen_height - 30, 30):
+                checkColor = red if (x / 30) % 2 != (y / 30) % 2 else white
+                pygame.draw.rect(screen, checkColor, pygame.Rect(x, y, 30, 30))
 
         for coord in snake:
-            pygame.draw.circle(screen, color, (coord[0], coord[1]), 5)
+            pygame.draw.circle(screen, color, (coord[0] + 15, coord[1] + 15), 15)
         
-        pygame.draw.circle(screen, black, (pie[0], pie[1]), 5)
+        screen.blit(pie_img, (pie[0] - 5, pie[1] - 5))
         
         if not isPaused:
             move_snake()
 
-        if snake[0][0] < 20 or snake[0][0] > screen_width - 20 or snake[0][1] < 40 or snake[0][1] > screen_height - 20:
+        if snake[0][0] < 0 or snake[0][0] > screen_width - 30 or snake[0][1] < 30 or snake[0][1] > screen_height - 30:
             # snake reached wall, end game
             print('game ended')
             scene_index = 2
@@ -262,13 +267,13 @@ def play_screen():
         commandRect = commandText.get_rect()
         commandRect.topleft = (0, 0)
 
-        pygame.draw.rect(screen, black, (20, 40, screen_width - 40, screen_height - 60), 1)
-        
-        clock.tick(1)
+        pygame.draw.rect(screen, black, (30, 60, screen_width - 60, screen_height - 90), 1)
 
         screen.blit(scoreText, scoreRect)
         screen.blit(commandText, commandRect)
         pygame.display.update()
+
+        clock.tick(1)
         
     return score
 
@@ -302,65 +307,6 @@ def end_screen(score):
         screen.blit(instructionText2, instructionRect2)
         screen.blit(instructionText3, instructionRect3)
         screen.blit(scoreText, scoreRect)
-        pygame.display.update()
-
-def instruction_screen():
-    instructions = [
-        "'Up' 'Left' 'Right' 'Down'",
-        "Speak the commands to move",
-        "Say 'continue' to return",
-    ]
-    while scene_index == 3:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-        screen.fill(white)
-        titleFont = pygame.font.Font(None, 56)
-        titleText = titleFont.render("Instructions", True, black)
-        titleRect = titleText.get_rect()
-        titleRect.center = (screen_width // 2, 50)
-
-        instructionFont = pygame.font.Font(None, 36)
-
-        for i, text in enumerate(instructions):
-            instructionText = instructionFont.render(text, True, black)
-            instructionRect = instructionText.get_rect()
-            instructionRect.center = (screen_width // 2, screen_height // 2 + 50 + i * 40)
-            screen.blit(instructionText, instructionRect)
-
-        screen.blit(titleText, titleRect)
-
-        pygame.display.update()
-
-
-def end_screen():
-    while scene_index == 2:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-        screen.fill(green)
-        titleFont = pygame.font.Font(None, 72)
-        titleText = titleFont.render("Game over", True, black)
-        titleRect = titleText.get_rect()
-        titleRect.center = (screen_width // 2, screen_height // 2)
-
-        instructionFont = pygame.font.Font(None, 36)
-        instructionText1 = instructionFont.render("Say 'retry' to try again", True, black)
-        instructionText2 = instructionFont.render("Say 'exit' to quit", True, black)
-
-        instructionRect1 = instructionText1.get_rect()
-        instructionRect2 = instructionText2.get_rect()
-
-        instructionRect1.center = (screen_width // 2, screen_height // 2 + 50)
-        instructionRect2.center = (screen_width // 2, screen_height // 2 + 90)
-
-        screen.blit(titleText, titleRect)
-        screen.blit(instructionText1, instructionRect1)
-        screen.blit(instructionText2, instructionRect2)
         pygame.display.update()
 
 def instruction_screen():
