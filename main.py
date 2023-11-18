@@ -21,6 +21,8 @@ blackberry = (77, 1, 52)
 screen_width = 600
 screen_height = 600
 scene_index = 0     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
+color_menu = 0
+color = blueberry
 
 start_bg = pygame.image.load("images\startscreen.jpg")
 start_bg = pygame.transform.scale(start_bg, (screen_width, screen_height))
@@ -51,6 +53,8 @@ class Direction(Enum):
 
 def voice_recognition():
     global scene_index
+    global color_menu
+    global color
 
     while True:
         with sr.Microphone() as source:
@@ -60,7 +64,7 @@ def voice_recognition():
             audio = recognizer.listen(source)
 
             try:
-                command = recognizer.recognize_google(audio)
+                command = recognizer.recognize_google(audio).lower()
                 print("You said:", command)
 
                  #Start screen commands
@@ -69,6 +73,24 @@ def voice_recognition():
                         scene_index = 1
                     elif "instructions" in command:
                         scene_index = 3
+                    elif "customize" in command:
+                        color_menu = 1
+                    elif "back" in command:
+                        color_menu = 0
+                    elif color_menu == 1 and "apple" in command:
+                            color = apple
+                    elif color_menu == 1 and "blackberry" in command:
+                        color = blackberry
+                    elif color_menu == 1 and "blueberry" in command:
+                        color = blueberry
+                    elif color_menu == 1 and "cherry" in command:
+                        color = cherry
+                    elif color_menu == 1 and "lemon" in command:
+                        color = lemon
+                    elif color_menu == 1 and "pecan" in command:
+                        color = pecan
+                    elif color_menu == 1 and "pumpkin" in command:
+                        color = pumpkin
                     else:
                         print("Unrecognized command") 
                 
@@ -120,6 +142,22 @@ def voice_recognition():
 
 def start_screen(high_score):
     global scene_index
+    global color_menu
+
+    colors = [
+    "apple", "blackberry", "blueberry", "cherry", 
+    "lemon", "pecan", "pumpkin"
+    ]
+
+    color_dict = {
+    "apple": apple,
+    "blackberry": blackberry,
+    "blueberry": blueberry,
+    "cherry": cherry,
+    "lemon": lemon,
+    "pecan": pecan,
+    "pumpkin": pumpkin,
+    }
     
     while scene_index == 0:
         for event in pygame.event.get():
@@ -130,26 +168,50 @@ def start_screen(high_score):
         screen.blit(start_bg, (0, 0))
 
         instruction_font = pygame.font.Font(None, 45)
+        customize_font = pygame.font.Font(None, 30)
+        
         instruction_text1 = instruction_font.render("Say 'start' to play", True, black)
         instruction_text2 = instruction_font.render("Say 'instructions' for instructions", True, black)
         score_text = instruction_font.render(str(high_score), True, black)
+        customize_text = customize_font.render("Customize", True, black)
 
         instruction_rect1 = instruction_text1.get_rect()
         instruction_rect2 = instruction_text2.get_rect()
         score_rect = score_text.get_rect()
+        customize_rect = customize_text.get_rect()
 
         instruction_rect1.center = (screen_width // 2, screen_height // 2 + 225)
         instruction_rect2.center = (screen_width // 2, screen_height // 2 + 255)
         score_rect.center = (75, 375)
+        customize_rect.center = (520, 80)
 
         screen.blit(instruction_text1, instruction_rect1)
         screen.blit(instruction_text2, instruction_rect2)
         screen.blit(score_text, score_rect)
+        screen.blit(customize_text, customize_rect)
+
+        color_font = pygame.font.Font(None, 35)
+        if color_menu == 1:
+            color_instructions1 = color_font.render("Say an option to change snake colors", True, black)
+            color_instructions2 = color_font.render("Say back to close the color menu", True, black)
+            color_rect1 = color_instructions1.get_rect()
+            color_rect2 = color_instructions2.get_rect()
+            color_rect1.center = (220, 140)
+            color_rect2.center = (220, 170)
+            screen.blit(color_instructions1, color_rect1)
+            screen.blit(color_instructions2, color_rect2)
+
+            for i, color_name in enumerate(colors):
+                color_text = color_font.render(color_name, True, color_dict[color_name])
+                color_rect = color_text.get_rect()
+                color_rect.center = (520, 120 + i * 40)
+                screen.blit(color_text, color_rect)
+
         pygame.display.update()
 
 def play_screen():
     global scene_index
-    
+
     def move_snake():
         
         prevVal = snake[0][:]
@@ -186,9 +248,7 @@ def play_screen():
         elif currentDirection == Direction.UP:
             snake.append([currentEnd[0], currentEnd[1] + 30])
 
-
-    # color will eventually be changeable
-    color = blueberry
+    
     score = 0
     currentDirection = Direction.RIGHT
     snake = [
@@ -306,11 +366,7 @@ def end_screen(score):
         pygame.display.update()
 
 def instruction_screen():
-    # instructions = [
-    #     "'Up' 'Left' 'Right' 'Down'",
-    #     "Speak the commands to move",
-    #     "Say 'continue' to return",
-    # ]
+
     while scene_index == 3:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -318,20 +374,6 @@ def instruction_screen():
                 sys.exit()
 
         screen.blit(instr_bg, (0, 0))
-        # title_font = pygame.font.Font(None, 56)
-        # title_text = title_font.render("Instructions", True, black)
-        # title_rect = title_text.get_rect()
-        # title_rect.center = (screen_width // 2, 50)
-
-        # instruction_font = pygame.font.Font(None, 36)
-
-        # for i, text in enumerate(instructions):
-        #     instruction_text = instruction_font.render(text, True, black)
-        #     instruction_rect = instruction_text.get_rect()
-        #     instruction_rect.center = (screen_width // 2, screen_height // 2 + 50 + i * 40)
-        #     screen.blit(instruction_text, instruction_rect)
-
-        # screen.blit(title_text, title_rect)
 
         pygame.display.update()
 
