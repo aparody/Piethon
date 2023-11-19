@@ -1,14 +1,18 @@
 import random
+import random
 import pygame
 import sys
 import speech_recognition as sr
 import threading
+from enum import Enum
 from enum import Enum
 
 pygame.init()
 recognizer = sr.Recognizer()
 black = (0, 0, 0)
 white = (255, 255, 255)
+brown = (127, 92, 73)
+pink = (251, 189, 188)
 green = (0, 255, 0)
 red = (249, 113, 110)
 blueberry = (42, 65, 111)
@@ -21,6 +25,7 @@ blackberry = (77, 1, 52)
 screen_width = 600
 screen_height = 600
 scene_index = 0     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
+
 color_menu = 0
 color = blueberry
 
@@ -28,12 +33,16 @@ start_bg = pygame.image.load("images\startscreen.jpg")
 start_bg = pygame.transform.scale(start_bg, (screen_width, screen_height))
 play_bg = pygame.image.load("images/play-background.jpeg")
 play_bg = pygame.transform.scale(play_bg, (screen_width, screen_height))
+pause_bg = pygame.image.load("images/play-background.jpeg")
+pause_bg = pygame.transform.scale(pause_bg, (450, 300))
 end_bg = pygame.image.load("images\endscreen.jpg")
 end_bg = pygame.transform.scale(end_bg, (screen_width, screen_height))
 instr_bg = pygame.image.load("images\instructionscreen.jpg")
 instr_bg = pygame.transform.scale(instr_bg, (screen_width, screen_height))
 pie_img = pygame.image.load("images/pie.png")
 pie_img = pygame.transform.scale(pie_img, (40, 40))
+hat_img = pygame.image.load("images/hat.png")
+hat_img = pygame.transform.scale(hat_img, (30, 30))
 
 CHANGE_UP = pygame.USEREVENT + 1
 CHANGE_RIGHT = pygame.USEREVENT + 2
@@ -41,6 +50,7 @@ CHANGE_DOWN = pygame.USEREVENT + 3
 CHANGE_LEFT = pygame.USEREVENT + 4
 PAUSE_GAME = pygame.USEREVENT + 5
 RESUME_GAME = pygame.USEREVENT + 6
+QUIT_GAME = pygame.USEREVENT + 7
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Snake Game")
@@ -104,10 +114,13 @@ def voice_recognition():
                         pygame.event.post(pygame.event.Event(CHANGE_LEFT))
                     elif "right" in command:
                         pygame.event.post(pygame.event.Event(CHANGE_RIGHT))
+                        pass
                     elif "pause" in command:
                         pygame.event.post(pygame.event.Event(PAUSE_GAME))
-                    elif "resume" in command:
+                    elif "play" in command:
                         pygame.event.post(pygame.event.Event(RESUME_GAME))
+                    elif "quit" in command:
+                        pygame.event.post(pygame.event.Event(QUIT_GAME))
                     #'Next' command is used for testing the end screen quickly
                     elif "next" in command:
                         scene_index = 2
@@ -256,6 +269,7 @@ def play_screen():
         [screen_width // 2 - 30, screen_height // 2],
         [screen_width // 2 - 60, screen_height // 2]
     ]
+    hat = [screen_width // 2, screen_height // 2 - 30]
     clock = pygame.time.Clock()
     # NOTE: The below is temporary because otherwise it is impossible to get the pie :(
     # pie = generate_pie()
@@ -283,6 +297,8 @@ def play_screen():
                 isPaused = True
             if event.type == RESUME_GAME:
                 isPaused = False
+            if event.type == QUIT_GAME:
+                scene_index = 0
         
         screen.blit(play_bg, (0, 0))
         for x in range(30,screen_width - 30, 30):
@@ -293,10 +309,12 @@ def play_screen():
         for coord in snake:
             pygame.draw.circle(screen, color, (coord[0] + 15, coord[1] + 15), 15)
         
+        screen.blit(hat_img, (hat[0], hat[1]))
         screen.blit(pie_img, (pie[0] - 5, pie[1] - 5))
         
         if not isPaused:
             move_snake()
+            hat = [snake[0][0], snake[0][1] - 30]
 
         if snake[0][0] < 0 or snake[0][0] > screen_width - 30 or snake[0][1] < 30 or snake[0][1] > screen_height - 30:
             # snake reached wall, end game
@@ -324,10 +342,34 @@ def play_screen():
         commandRect = commandText.get_rect()
         commandRect.topleft = (0, 0)
 
-        pygame.draw.rect(screen, black, (30, 60, screen_width - 60, screen_height - 90), 1)
-
         screen.blit(scoreText, scoreRect)
         screen.blit(commandText, commandRect)
+
+        if isPaused:
+            surface = pygame.Surface(pygame.Rect((0, 0, screen_width, screen_height)).size, pygame.SRCALPHA)
+            pygame.draw.rect(surface, (255,255,255,150), surface.get_rect())
+            screen.blit(surface, (0, 0, screen_width, screen_height))
+
+            screen.blit(pause_bg, (75, 150))
+            pygame.draw.rect(screen, brown, pygame.Rect(75, 150, 450, 300), 3)
+
+            pygame.draw.rect(screen, pink, pygame.Rect(100, 175, 400, 110))
+            pygame.draw.rect(screen, brown, pygame.Rect(100, 175, 400, 110), 3)
+            pygame.draw.rect(screen, pink, pygame.Rect(100, 315, 400, 110))
+            pygame.draw.rect(screen, brown, pygame.Rect(100, 315, 400, 110), 3)
+
+            playFont = pygame.font.Font(None, 30)
+            playText = playFont.render('Say "play" to continue playing', True, black)
+            playRect = playText.get_rect()
+            playRect.center = (300, 230)
+            screen.blit(playText, playRect)
+
+            homeFont = pygame.font.Font(None, 30)
+            homeText = homeFont.render('Say "quit" to return to home screen', True, black)
+            homeRect = homeText.get_rect()
+            homeRect.center = (300, 375)
+            screen.blit(homeText, homeRect)
+
         pygame.display.update()
 
         clock.tick(1)
