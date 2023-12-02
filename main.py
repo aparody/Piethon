@@ -5,7 +5,6 @@ import sys
 import speech_recognition as sr
 import threading
 from enum import Enum
-from enum import Enum
 
 pygame.init()
 recognizer = sr.Recognizer()
