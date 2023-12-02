@@ -1,8 +1,10 @@
 import random
+import random
 import pygame
 import sys
 import speech_recognition as sr
 import threading
+from enum import Enum
 from enum import Enum
 
 pygame.init()
@@ -24,6 +26,7 @@ blackberry = (77, 1, 52)
 screen_width = 600
 screen_height = 600
 scene_index = 0     #Keeps track of current scene. 0 is start, 1 is play, 2 is end, and 3 is instructions screen
+
 color_menu = 0
 color = blueberry
 
@@ -114,6 +117,7 @@ def voice_recognition():
                         pygame.event.post(pygame.event.Event(CHANGE_LEFT))
                     elif "right" in command:
                         pygame.event.post(pygame.event.Event(CHANGE_RIGHT))
+                        pass
                     elif "pause" in command:
                         pygame.event.post(pygame.event.Event(PAUSE_GAME))
                     elif "play" in command:
@@ -348,8 +352,6 @@ def play_screen():
         commandText = commandFont.render(currentDirection.name, True, black)
         commandRect = commandText.get_rect()
         commandRect.topleft = (0, 0)
-
-        pygame.draw.rect(screen, black, (30, 60, screen_width - 60, screen_height - 90), 1)
 
         screen.blit(scoreText, scoreRect)
         screen.blit(commandText, commandRect)
